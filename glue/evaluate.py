@@ -58,9 +58,9 @@ def simple_accuracy(pred_srs, label_srs):
     return (pred_srs == label_srs).mean()
 
 
-def acc_and_f1(pred_srs, label_srs):
+def acc_and_f1(pred_srs, label_srs, average='binary'):
     acc = simple_accuracy(pred_srs, label_srs)
-    f1 = f1_score(y_true=label_srs, y_pred=pred_srs)
+    f1 = f1_score(y_true=label_srs, y_pred=pred_srs, average=average)
     return {
         "acc": acc,
         "f1": f1,
@@ -91,15 +91,17 @@ def compute_metrics(task_name, pred_srs, label_srs):
     elif task_name == "qqp":
         return acc_and_f1(pred_srs, label_srs)
     elif task_name == "mnli":
-        return {"acc": simple_accuracy(pred_srs, label_srs)}
+        return acc_and_f1(pred_srs, label_srs, average='micro')
     elif task_name == "mnli-mm":
-        return {"acc": simple_accuracy(pred_srs, label_srs)}
+        return acc_and_f1(pred_srs, label_srs, average='micro')
     elif task_name == "qnli":
-        return {"acc": simple_accuracy(pred_srs, label_srs)}
+        return acc_and_f1(pred_srs, label_srs, average='micro')
     elif task_name == "rte":
-        return {"acc": simple_accuracy(pred_srs, label_srs)}
+        return acc_and_f1(pred_srs, label_srs, average='micro')
     elif task_name == "wnli":
-        return {"acc": simple_accuracy(pred_srs, label_srs)}
+        return acc_and_f1(pred_srs, label_srs, average='micro')
+    elif task_name == "snli":
+        return acc_and_f1(pred_srs, label_srs, average='micro')
     else:
         raise KeyError(task_name)
 
