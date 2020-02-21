@@ -58,7 +58,7 @@ def get_args(*in_args):
                              "than this will be padded.")
     parser.add_argument("--do_save", action="store_true")
     parser.add_argument("--do_load_classifier", action="store_true")
-    parser.add_argument("--baseline_model_dir")
+    parser.add_argument("--baseline_model_dir", type=str)
     parser.add_argument("--do_train",
                         action='store_true',
                         help="Whether to run training.")
