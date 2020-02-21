@@ -72,7 +72,7 @@ def create_from_pretrained(task_type, bert_model_name, cache_dir, num_labels):
     return model
 
 
-def load_bert(task_type, bert_model_name, bert_load_mode, all_state, num_labels, load_classifier=False
+def load_bert(task_type, bert_model_name, bert_load_mode, all_state, num_labels, load_classifier=False, 
               bert_config_json_path=None):
     if bert_config_json_path is None:
         bert_config_json_path = os.path.join(get_bert_config_path(bert_model_name), "bert_config.json")
