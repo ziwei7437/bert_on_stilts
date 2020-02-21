@@ -247,10 +247,10 @@ def main():
         if args.do_load_classifier:
             cls_path = os.path.join(args.baseline_model_dir, "all_state.p_cls")
             print("classifer bias before: ")
-            print(runner.model.state_dict()["classifer.bias"])
+            print(runner.model.state_dict()["classifier.bias"])
             runner.model.load_state_dict(torch.load(cls_path), strict=False)
             print("classifer bias after: ")
-            print(runner.model.state_dict()["classifer.bias"])
+            print(runner.model.state_dict()["classifier.bias"])
             print("classifier overwrited by ", cls_path)
         
         results = runner.run_val(val_examples, task_name=task.name, verbose=not args.not_verbose)
