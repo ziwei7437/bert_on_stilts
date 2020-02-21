@@ -246,11 +246,15 @@ def main():
         # load fine-tuned classification weights
         if args.do_load_classifier:
             cls_path = os.path.join(args.baseline_model_dir, "all_state.p_cls")
-            print("classifer bias before: ")
+            print("classifier bias before: ")
             print(runner.model.state_dict()["classifier.bias"])
+            print("classifier weight before: ")
+            print(runner.model.state_dict()["classifier.weight"])
             runner.model.load_state_dict(torch.load(cls_path), strict=False)
-            print("classifer bias after: ")
+            print("classifier bias after: ")
             print(runner.model.state_dict()["classifier.bias"])
+            print("classifier weight after: ")
+            print(runner.model.state_dict()["classifier.weight"])
             print("classifier overwrited by ", cls_path)
         
         results = runner.run_val(val_examples, task_name=task.name, verbose=not args.not_verbose)
