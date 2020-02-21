@@ -47,6 +47,7 @@ def get_args(*in_args):
     parser.add_argument("--bert_config_json_path", default=None, type=str)
     parser.add_argument("--bert_vocab_path", default=None, type=str)
     parser.add_argument("--bert_save_mode", default="all", type=str)
+    
 
     # === Other parameters === #
     parser.add_argument("--max_seq_length",
@@ -56,6 +57,8 @@ def get_args(*in_args):
                              "Sequences longer than this will be truncated, and sequences shorter \n"
                              "than this will be padded.")
     parser.add_argument("--do_save", action="store_true")
+    parser.add_argument("--do_load_classifier", action="store_true")
+    parser.add_argument("--baseline_model_dir")
     parser.add_argument("--do_train",
                         action='store_true',
                         help="Whether to run training.")
@@ -239,6 +242,12 @@ def main():
 
     if args.do_val:
         val_examples = task.get_dev_examples()
+        # load fine-tuned classification weights
+        if args.do_load_classifier:
+            cls_path = os.path.join(args.baseline_model_dir, "all_state.p_cls")
+            runner.model.load_state_dict(torch.load(cls_path), strict=False)
+            print("classifier overwrited by ", cls_path)
+        
         results = runner.run_val(val_examples, task_name=task.name, verbose=not args.not_verbose)
         df = pd.DataFrame(results["logits"])
         df.to_csv(os.path.join(args.output_dir, "val_preds.csv"), header=False, index=False)

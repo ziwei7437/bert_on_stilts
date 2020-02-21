@@ -72,7 +72,7 @@ def create_from_pretrained(task_type, bert_model_name, cache_dir, num_labels):
     return model
 
 
-def load_bert(task_type, bert_model_name, bert_load_mode, all_state, num_labels,
+def load_bert(task_type, bert_model_name, bert_load_mode, all_state, num_labels, load_classifier=False
               bert_config_json_path=None):
     if bert_config_json_path is None:
         bert_config_json_path = os.path.join(get_bert_config_path(bert_model_name), "bert_config.json")
@@ -96,6 +96,9 @@ def load_bert(task_type, bert_model_name, bert_load_mode, all_state, num_labels,
                 state_dict=state_dict,
                 num_labels=num_labels,
             )
+        if load_classifier:
+            model.classifier = torch.load()
+
     elif task_type == TaskType.REGRESSION:
         assert num_labels == 1
         if bert_load_mode in ("state_full_model", "full_model_only"):
@@ -174,5 +177,11 @@ def save_bert(model, optimizer, args, save_path, save_mode="all", verbose=True):
         optimizer_state_dict = utils.to_cpu(optimizer.state_dict()) if optimizer is not None else None
         if verbose:
             print("Saving {} optimizer elems:".format(len(optimizer_state_dict)))
+    
+    # Save classifer
+    classifier_dict = {}
+    classifier_dict['classifier.weight'] = model_to_save.state_dict()['classifier.weight']
+    classifier_dict['classifier.bias'] = model_to_save.state_dict()['classifier.bias']
+    torch.save(classifier_dict, save_path+'_cls')
 
     torch.save(save_dict, save_path)
