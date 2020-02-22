@@ -209,7 +209,7 @@ class RunnerParameters:
 
 
 class GlueTaskRunner:
-    def __init__(self, model, optimizer, tokenizer, label_list, device, rparams):
+    def __init__(self, model, optimizer, tokenizer, label_list, device, rparams, bert_no_training):
         self.model = model
         self.optimizer = optimizer
         self.tokenizer = tokenizer
@@ -217,6 +217,7 @@ class GlueTaskRunner:
         self.label_map = {v: i for i, v in enumerate(label_list)}
         self.device = device
         self.rparams = rparams
+        self.bert_no_training = bert_no_training
 
     def run_train(self, train_examples, verbose=True):
         if verbose:
@@ -245,6 +246,8 @@ class GlueTaskRunner:
 
     def run_train_epoch_context(self, train_dataloader):
         self.model.train()
+        if self.bert_no_training:
+            self.model.bert.eval()
         train_epoch_state = TrainEpochState()
         for step, batch in enumerate(tqdm(train_dataloader, desc="Training")):
             self.run_train_step(

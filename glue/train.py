@@ -60,6 +60,7 @@ def get_args(*in_args):
     parser.add_argument("--do_save", action="store_true")
     parser.add_argument("--do_load_classifier", action="store_true")
     parser.add_argument("--baseline_model_dir", type=str)
+    parser.add_argument("--only_train_classifier", action="store_true", help="Set to not train BERT when fine-tuning")
     parser.add_argument("--do_train",
                         action='store_true',
                         help="Whether to run training.")
@@ -201,7 +202,8 @@ def main():
             t_total=t_total, warmup_proportion=args.warmup_proportion,
             num_train_epochs=args.num_train_epochs,
             train_batch_size=args.train_batch_size, eval_batch_size=args.eval_batch_size,
-        )
+        ),
+        bert_no_training=args.only_train_classifier
     )
 
     if args.do_train:
