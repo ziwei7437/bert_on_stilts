@@ -15,6 +15,7 @@ from pytorch_pretrained_bert.utils import at_most_one_of, random_sample
 from pytorch_pretrained_bert.modeling import BertModel, MyClassifier, BertConfig
 import shared.initialization as initialization
 import shared.log_info as log_info
+import pytorch_pretrained_bert.utils as utils
 
 # todo: cleanup imports
 
@@ -288,6 +289,11 @@ def main():
             save_path=os.path.join(args.output_dir, "all_state.p"),
             save_mode=args.bert_save_mode,
         )
+        # save trained classifier and bert model
+        if args.only_train_classifier:
+            model_to_save = bert_as_encoder.module if hasattr(bert_as_encoder, 'module') else model
+            bert_state_dict = utils.to_cpu(model_to_save.state_dict())
+            torch.save(bert_state_dict, os.path.join(args.output_dir, "bert_encoder_state_dict.p"))
 
     if args.do_val:
         val_examples = task.get_dev_examples()
