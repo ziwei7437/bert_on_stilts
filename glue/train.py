@@ -184,8 +184,10 @@ def main():
             config_file=args.bert_config_json_path, 
             state_dict=state_dict
         )
+        bert_as_encoder.to(device)
         config_file = BertConfig.from_json_file(args.bert_config_json_path)
         classifier = MyClassifier(config=config_file, num_labels=len(task.processor.get_labels()))
+        classifier.to(device)
 
         optimizer = optim.SGD(classifier.parameters(), lr=0.001, momentum=0.9)
 
