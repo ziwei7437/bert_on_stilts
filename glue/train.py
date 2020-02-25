@@ -8,7 +8,7 @@ from torch import optim
 import logging
 
 from glue.tasks import get_task, MnliMismatchedProcessor
-from glue.runners import GlueTaskRunner, RunnerParameters
+from glue.runners import GlueTaskRunner, RunnerParameters, GlueTaskClassifierRunner
 from glue import model_setup as glue_model_setup
 from shared import model_setup as shared_model_setup
 from pytorch_pretrained_bert.utils import at_most_one_of, random_sample
