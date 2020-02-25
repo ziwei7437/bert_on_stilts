@@ -175,7 +175,7 @@ def save_bert(model, optimizer, args, save_path, save_mode="all", verbose=True):
     # Save optimizer
     if save_mode in ["all", "tunable"]:
         optimizer_state_dict = utils.to_cpu(optimizer.state_dict()) if optimizer is not None else None
-        if verbose:
+        if verbose and optimizer_state_dict is not None:
             print("Saving {} optimizer elems:".format(len(optimizer_state_dict)))
     
     # Save classifer
