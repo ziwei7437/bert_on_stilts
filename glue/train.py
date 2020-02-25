@@ -3,6 +3,7 @@ import json
 import os
 import pandas as pd
 import torch
+from torch import optim
 
 import logging
 
@@ -59,8 +60,8 @@ def get_args(*in_args):
                              "Sequences longer than this will be truncated, and sequences shorter \n"
                              "than this will be padded.")
     parser.add_argument("--do_save", action="store_true")
-    parser.add_argument("--do_load_classifier", action="store_true")
-    parser.add_argument("--baseline_model_dir", type=str)
+    parser.add_argument("--do_load_classifier", action="store_true") # will be deprecated
+    parser.add_argument("--baseline_model_dir", type=str) # will be deprecated
     parser.add_argument("--only_train_classifier", action="store_true", help="Set to not train BERT when fine-tuning")
     parser.add_argument("--do_train",
                         action='store_true',
@@ -166,6 +167,7 @@ def main():
         local_rank=args.local_rank,
         bert_config_json_path=args.bert_config_json_path,
     )
+
     if args.only_train_classifier:
 
         train_examples = task.get_train_examples()
