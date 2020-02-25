@@ -1346,3 +1346,24 @@ def load_from_adapter(model, bert_state, adapter_state):
         model_state_dict[k] = adapter_state[k]
 
     model.load_state_dict(model_state_dict)
+
+
+class MyClassifier(nn.Module):
+    """separate linear classifier which takes bert encodings as input"""
+
+    def __init__(self, config, num_labels):
+        super(MyClassifier, self).__init__()
+        self.num_labels = num_labels
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Linear(config.hidden_size, num_labels)
+
+    def forward(self, pooled_output, labels=None):
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            return loss
+        else:
+            return logits

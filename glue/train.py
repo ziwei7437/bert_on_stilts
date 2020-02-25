@@ -11,6 +11,7 @@ from glue.runners import GlueTaskRunner, RunnerParameters
 from glue import model_setup as glue_model_setup
 from shared import model_setup as shared_model_setup
 from pytorch_pretrained_bert.utils import at_most_one_of, random_sample
+from pytorch_pretrained_bert.modeling import BertModel, MyClassifier, BertConfig
 import shared.initialization as initialization
 import shared.log_info as log_info
 
@@ -165,6 +166,48 @@ def main():
         local_rank=args.local_rank,
         bert_config_json_path=args.bert_config_json_path,
     )
+    if args.only_train_classifier:
+
+        train_examples = task.get_train_examples()
+        if args.train_examples_number is not None:
+            train_examples = random_sample(train_examples, args.train_examples_number)
+        t_total = shared_model_setup.get_opt_train_steps(
+            num_train_examples=len(train_examples),
+            args=args,
+        )
+        
+        # Load Model...
+        state_dict = all_state['model']
+        bert_as_encoder = BertModel.from_state_dict(
+            config_file=args.bert_config_json_path, 
+            state_dict=state_dict
+        )
+        config_file = BertConfig.from_json_file(args.bert_config_json_path)
+        classifier = MyClassifier(config=config_file, num_labels=len(task.processor.get_labels()))
+
+        optimizer = optim.SGD(classifier.parameters(), lr=0.001, momentum=0.9)
+
+        # Run training for classifier.
+        runner_classifier = GlueTaskClassifierRunner(
+            bert_model = bert_as_encoder,
+            classifier_model = classifier,
+            optimizer = optimizer,
+            tokenizer = tokenizer,
+            label_list = task.get_labels(),
+            device = device,
+            rparams = RunnerParameters(
+                max_seq_length=args.max_seq_length,
+                local_rank=args.local_rank, n_gpu=n_gpu, fp16=args.fp16,
+                learning_rate=args.learning_rate, gradient_accumulation_steps=args.gradient_accumulation_steps,
+                t_total=t_total, warmup_proportion=args.warmup_proportion,
+                num_train_epochs=args.num_train_epochs,
+                train_batch_size=args.train_batch_size, eval_batch_size=args.eval_batch_size,
+            )
+        )
+        runner_classifier.run_train(train_examples)
+
+
+
     if args.do_train:
         if args.print_trainable_params:
             log_info.print_trainable_params(model)
@@ -202,8 +245,7 @@ def main():
             t_total=t_total, warmup_proportion=args.warmup_proportion,
             num_train_epochs=args.num_train_epochs,
             train_batch_size=args.train_batch_size, eval_batch_size=args.eval_batch_size,
-        ),
-        bert_no_training=args.only_train_classifier
+        )
     )
 
     if args.do_train:
@@ -245,21 +287,11 @@ def main():
 
     if args.do_val:
         val_examples = task.get_dev_examples()
-        # load fine-tuned classification weights
-        if args.do_load_classifier:
-            cls_path = os.path.join(args.baseline_model_dir, "all_state.p_cls")
-            print("classifier bias before: ")
-            print(runner.model.state_dict()["classifier.bias"])
-            print("classifier weight before: ")
-            print(runner.model.state_dict()["classifier.weight"])
-            runner.model.load_state_dict(torch.load(cls_path), strict=False)
-            print("classifier bias after: ")
-            print(runner.model.state_dict()["classifier.bias"])
-            print("classifier weight after: ")
-            print(runner.model.state_dict()["classifier.weight"])
-            print("classifier overwrited by ", cls_path)
+        if args.only_train_classifier:
+            results = runner_classifier.run_val(val_examples, task_name=task.name, verbose=not args.not_verbose)
+        else:
+            results = runner.run_val(val_examples, task_name=task.name, verbose=not args.not_verbose)
         
-        results = runner.run_val(val_examples, task_name=task.name, verbose=not args.not_verbose)
         df = pd.DataFrame(results["logits"])
         df.to_csv(os.path.join(args.output_dir, "val_preds.csv"), header=False, index=False)
         metrics_str = json.dumps({"loss": results["loss"], "metrics": results["metrics"]}, indent=2)
@@ -270,7 +302,11 @@ def main():
         # HACK for MNLI-mismatched
         if task.name == "mnli":
             mm_val_examples = MnliMismatchedProcessor().get_dev_examples(task.data_dir)
-            mm_results = runner.run_val(mm_val_examples, task_name=task.name, verbose=not args.not_verbose)
+            if args.only_train_classifier:
+                mm_results = runner_classifier.run_val(mm_val_examples, task_name=task.name, verbose=not args.not_verbose)
+            else:
+                mm_results = runner.run_val(mm_val_examples, task_name=task.name, verbose=not args.not_verbose)
+            
             df = pd.DataFrame(results["logits"])
             df.to_csv(os.path.join(args.output_dir, "mm_val_preds.csv"), header=False, index=False)
             combined_metrics = {}
@@ -282,6 +318,7 @@ def main():
                 "loss": results["loss"],
                 "metrics": combined_metrics,
             }, indent=2)
+            print(combined_metrics_str)
             with open(os.path.join(args.output_dir, "val_metrics.json"), "w") as f:
                 f.write(combined_metrics_str)
 

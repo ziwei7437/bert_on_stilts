@@ -179,9 +179,9 @@ def save_bert(model, optimizer, args, save_path, save_mode="all", verbose=True):
             print("Saving {} optimizer elems:".format(len(optimizer_state_dict)))
     
     # Save classifer
-    classifier_dict = {}
-    classifier_dict['classifier.weight'] = model_to_save.state_dict()['classifier.weight']
-    classifier_dict['classifier.bias'] = model_to_save.state_dict()['classifier.bias']
-    torch.save(classifier_dict, save_path+'_cls')
+    #classifier_dict = {}
+    #classifier_dict['classifier.weight'] = model_to_save.state_dict()['classifier.weight']
+    #classifier_dict['classifier.bias'] = model_to_save.state_dict()['classifier.bias']
+    #torch.save(classifier_dict, save_path+'_cls')
 
     torch.save(save_dict, save_path)
