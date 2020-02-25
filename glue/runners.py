@@ -385,6 +385,7 @@ class GlueTaskClassifierRunner:
         self.bert_model = bert_model
         self.classifier_model = classifier_model
         self.optimizer = optimizer
+        self.tokenizer = tokenizer
         self.label_list = label_list
         self.label_map = {v: i for i, v in enumerate(label_list)}
         self.device = device
