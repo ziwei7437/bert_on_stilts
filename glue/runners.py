@@ -388,7 +388,7 @@ class GlueTaskClassifierRunner:
         self.label_list = label_list
         self.label_map = {v: i for i, v in enumerate(label_list)}
         self.device = device
-        self.rparam = rparam
+        self.rparams = rparams
     
     def run_train_classifier(self, train_examples, verbose=True):
         if verbose:
