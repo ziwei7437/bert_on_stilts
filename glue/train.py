@@ -206,7 +206,7 @@ def main():
                 train_batch_size=args.train_batch_size, eval_batch_size=args.eval_batch_size,
             )
         )
-        runner_classifier.run_train(train_examples)
+        runner_classifier.run_train_classifier(train_examples)
 
 
 
