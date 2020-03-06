@@ -156,19 +156,21 @@ def main():
         bert_vocab_path=args.bert_vocab_path,
     )
     all_state = shared_model_setup.load_overall_state(args.bert_load_path, relaxed=True)
-    model = glue_model_setup.create_model(
-        task_type=task.processor.TASK_TYPE,
-        bert_model_name=args.bert_model,
-        bert_load_mode=args.bert_load_mode,
-        bert_load_args=args.bert_load_args,
-        all_state=all_state,
-        num_labels=len(task.processor.get_labels()),
-        device=device,
-        n_gpu=n_gpu,
-        fp16=args.fp16,
-        local_rank=args.local_rank,
-        bert_config_json_path=args.bert_config_json_path,
-    )
+
+    if not args.only_train_classifier:
+        model = glue_model_setup.create_model(
+            task_type=task.processor.TASK_TYPE,
+            bert_model_name=args.bert_model,
+            bert_load_mode=args.bert_load_mode,
+            bert_load_args=args.bert_load_args,
+            all_state=all_state,
+            num_labels=len(task.processor.get_labels()),
+            device=device,
+            n_gpu=n_gpu,
+            fp16=args.fp16,
+            local_rank=args.local_rank,
+            bert_config_json_path=args.bert_config_json_path,
+        )
 
     if args.only_train_classifier:
 
@@ -226,7 +228,7 @@ def main():
 
 
 
-    if args.do_train:
+    if args.do_train and not args.only_train_classifier:
         if args.print_trainable_params:
             log_info.print_trainable_params(model)
         train_examples = task.get_train_examples()
@@ -250,21 +252,22 @@ def main():
         t_total = 0
         optimizer = None
 
-    runner = GlueTaskRunner(
-        model=model,
-        optimizer=optimizer,
-        tokenizer=tokenizer,
-        label_list=task.get_labels(),
-        device=device,
-        rparams=RunnerParameters(
-            max_seq_length=args.max_seq_length,
-            local_rank=args.local_rank, n_gpu=n_gpu, fp16=args.fp16,
-            learning_rate=args.learning_rate, gradient_accumulation_steps=args.gradient_accumulation_steps,
-            t_total=t_total, warmup_proportion=args.warmup_proportion,
-            num_train_epochs=args.num_train_epochs,
-            train_batch_size=args.train_batch_size, eval_batch_size=args.eval_batch_size,
+    if not args.only_train_classifier:
+        runner = GlueTaskRunner(
+            model=model,
+            optimizer=optimizer,
+            tokenizer=tokenizer,
+            label_list=task.get_labels(),
+            device=device,
+            rparams=RunnerParameters(
+                max_seq_length=args.max_seq_length,
+                local_rank=args.local_rank, n_gpu=n_gpu, fp16=args.fp16,
+                learning_rate=args.learning_rate, gradient_accumulation_steps=args.gradient_accumulation_steps,
+                t_total=t_total, warmup_proportion=args.warmup_proportion,
+                num_train_epochs=args.num_train_epochs,
+                train_batch_size=args.train_batch_size, eval_batch_size=args.eval_batch_size,
+            )
         )
-    )
 
     if args.do_train:
         assert at_most_one_of([args.do_val_history, args.train_save_every])
@@ -297,11 +300,12 @@ def main():
 
     if args.do_save:
         # Save a trained model
-        glue_model_setup.save_bert(
-            model=model, optimizer=optimizer, args=args,
-            save_path=os.path.join(args.output_dir, "all_state.p"),
-            save_mode=args.bert_save_mode,
-        )
+        if not args.only_train_classifier:
+            glue_model_setup.save_bert(
+                model=model, optimizer=optimizer, args=args,
+                save_path=os.path.join(args.output_dir, "all_state.p"),
+                save_mode=args.bert_save_mode,
+            )
         # save trained classifier and bert model
         if args.only_train_classifier:
             model_to_save = bert_as_encoder.module if hasattr(bert_as_encoder, 'module') else model
