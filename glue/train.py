@@ -16,6 +16,7 @@ from pytorch_pretrained_bert.modeling import BertModel, MyClassifier, BertConfig
 import shared.initialization as initialization
 import shared.log_info as log_info
 import pytorch_pretrained_bert.utils as utils
+from pytorch_pretrained_bert.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
 
 # todo: cleanup imports
 
@@ -180,11 +181,23 @@ def main():
         )
         
         # Load Model...
-        state_dict = all_state['model']
-        bert_as_encoder = BertModel.from_state_dict(
-            config_file=args.bert_config_json_path, 
-            state_dict=state_dict
-        )
+        if args.bert_load_mode == "state_model_only":
+            state_dict = all_state['model']
+            bert_as_encoder = BertModel.from_state_dict(
+                config_file=args.bert_config_json_path, 
+                state_dict=state_dict
+            )
+        elif args.bert_load_mode == "from_pretrained":
+            # todo...
+            cache_dir = PYTORCH_PRETRAINED_BERT_CACHE / 'distributed_{}'.format(args.local_rank)
+            bert_as_encoder = BertModel.from_pretrained(
+                pretrained_model_name_or_path=args.bert_model,
+                cache_dir=cache_dir
+            )
+            pass
+        else:
+            # raise error.. Do not support other load model currently.
+            pass
         bert_as_encoder.to(device)
         config_file = BertConfig.from_json_file(args.bert_config_json_path)
         classifier = MyClassifier(config=config_file, num_labels=len(task.processor.get_labels()))
