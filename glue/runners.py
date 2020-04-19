@@ -629,7 +629,7 @@ class GlueTaskClassifierRunner:
 
         self.training_state.tr_loss.append(loss.item())
         train_epoch_state.tr_loss += loss.item()
-        train_epoch_state.nb_tr_examples += batch.input_ids.size(0)
+        train_epoch_state.nb_tr_examples += batch.input_ids.size(0) if not self.train_infer_classifier else batch.input_ids_a.size(0)
         train_epoch_state.nb_tr_steps += 1
         if (step + 1) % self.rparams.gradient_accumulation_steps == 0:
             # modify learning rate with special warm up BERT uses
@@ -679,7 +679,7 @@ class GlueTaskClassifierRunner:
             logits = logits.detach().cpu().numpy()
             total_eval_loss += tmp_eval_loss.mean().item()
 
-            nb_eval_examples += batch.input_ids.size(0)
+            nb_eval_examples += batch.input_ids.size(0) if not self.train_infer_classifier else batch.input_ids_a.size(0)
             nb_eval_steps += 1
             all_logits.append(logits)
             all_labels.append(label_ids)
