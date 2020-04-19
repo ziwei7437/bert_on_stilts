@@ -1367,3 +1367,32 @@ class MyClassifier(nn.Module):
             return loss
         else:
             return logits
+
+
+class InfersentClassifier(nn.Module):
+    """same classifier structure with InferSent for comparison purpose"""
+
+    def __init__(self, config, num_labels):
+        super(InfersentClassifier, self).__init__()
+        self.num_labels = num_labels
+        self.input_size = config.hidden_size * 4 # (u,v,|u-v|, u*v) = 768*4
+        self.dropout_0 = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout_1 = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Sequential(
+            nn.Linear(self.input_size, config.hidden_size),
+            nn.Linear(config.hidden_size, self.num_labels)
+        )
+
+    def forward(self, u, v, labels=None):
+        """computes the loss or logits of two input sentence embeddings"""
+        u = self.dropout_0(u)
+        v = self.dropout_1(v)
+        features = torch.cat((u, v, torch.abs(u-v), u*v), 1)
+        logits = self.classifier(features)
+
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            return loss
+        else:
+            return logits

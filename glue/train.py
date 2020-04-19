@@ -12,11 +12,12 @@ from glue.runners import GlueTaskRunner, RunnerParameters, GlueTaskClassifierRun
 from glue import model_setup as glue_model_setup
 from shared import model_setup as shared_model_setup
 from pytorch_pretrained_bert.utils import at_most_one_of, random_sample
-from pytorch_pretrained_bert.modeling import BertModel, MyClassifier, BertConfig
+from pytorch_pretrained_bert.modeling import BertModel, MyClassifier, BertConfig, InfersentClassifier
 import shared.initialization as initialization
 import shared.log_info as log_info
 import pytorch_pretrained_bert.utils as utils
 from pytorch_pretrained_bert.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
+
 
 # todo: cleanup imports
 
@@ -31,8 +32,8 @@ def get_args(*in_args):
                         help="The input data dir. Should contain the .tsv files (or other data files) for the task.")
     parser.add_argument("--bert_model", default=None, type=str, required=True,
                         help="Bert pre-trained model selected in the list: bert-base-uncased, "
-                        "bert-large-uncased, bert-base-cased, bert-large-cased, bert-base-multilingual-uncased, "
-                        "bert-base-multilingual-cased, bert-base-chinese.")
+                             "bert-large-uncased, bert-base-cased, bert-large-cased, bert-base-multilingual-uncased, "
+                             "bert-base-multilingual-cased, bert-base-chinese.")
     parser.add_argument("--task_name",
                         default=None,
                         type=str,
@@ -52,7 +53,6 @@ def get_args(*in_args):
     parser.add_argument("--bert_config_json_path", default=None, type=str)
     parser.add_argument("--bert_vocab_path", default=None, type=str)
     parser.add_argument("--bert_save_mode", default="all", type=str)
-    
 
     # === Other parameters === #
     parser.add_argument("--max_seq_length",
@@ -62,9 +62,11 @@ def get_args(*in_args):
                              "Sequences longer than this will be truncated, and sequences shorter \n"
                              "than this will be padded.")
     parser.add_argument("--do_save", action="store_true")
-    parser.add_argument("--do_load_classifier", action="store_true") # will be deprecated
-    parser.add_argument("--baseline_model_dir", type=str) # will be deprecated
+    parser.add_argument("--do_load_classifier", action="store_true")  # will be deprecated
+    parser.add_argument("--baseline_model_dir", type=str)  # will be deprecated
     parser.add_argument("--only_train_classifier", action="store_true", help="Set to not train BERT when fine-tuning")
+    parser.add_argument("--only_train_infer_classifier", action='store_true', help="Set to use infersent classifier "
+                                                                                   "when only train classifier")
     parser.add_argument("--do_train",
                         action='store_true',
                         help="Whether to run training.")
@@ -181,12 +183,12 @@ def main():
             num_train_examples=len(train_examples),
             args=args,
         )
-        
+
         # Load Model...
         if args.bert_load_mode == "state_model_only":
             state_dict = all_state['model']
             bert_as_encoder = BertModel.from_state_dict(
-                config_file=args.bert_config_json_path, 
+                config_file=args.bert_config_json_path,
                 state_dict=state_dict
             )
         elif args.bert_load_mode == "from_pretrained":
@@ -202,31 +204,33 @@ def main():
             pass
         bert_as_encoder.to(device)
         config_file = BertConfig.from_json_file(args.bert_config_json_path)
-        classifier = MyClassifier(config=config_file, num_labels=len(task.processor.get_labels()))
+        if args.only_train_infer_classifier:
+            classifier = InfersentClassifier(config=config_file, num_labels=len(task.processor.get_labels()))
+        else:
+            classifier = MyClassifier(config=config_file, num_labels=len(task.processor.get_labels()))
         classifier.to(device)
 
         optimizer = optim.SGD(classifier.parameters(), lr=0.001, momentum=0.9)
 
         # Run training for classifier.
         runner_classifier = GlueTaskClassifierRunner(
-            bert_model = bert_as_encoder,
-            classifier_model = classifier,
-            optimizer = optimizer,
-            tokenizer = tokenizer,
-            label_list = task.get_labels(),
-            device = device,
-            rparams = RunnerParameters(
+            bert_model=bert_as_encoder,
+            classifier_model=classifier,
+            optimizer=optimizer,
+            tokenizer=tokenizer,
+            label_list=task.get_labels(),
+            device=device,
+            rparams=RunnerParameters(
                 max_seq_length=args.max_seq_length,
                 local_rank=args.local_rank, n_gpu=n_gpu, fp16=args.fp16,
                 learning_rate=args.learning_rate, gradient_accumulation_steps=args.gradient_accumulation_steps,
                 t_total=t_total, warmup_proportion=args.warmup_proportion,
                 num_train_epochs=args.num_train_epochs,
                 train_batch_size=args.train_batch_size, eval_batch_size=args.eval_batch_size,
-            )
+            ),
+            train_infer_classifier=args.only_train_infer_classifier,
         )
         runner_classifier.run_train_classifier(train_examples)
-
-
 
     if args.do_train and not args.only_train_classifier:
         if args.print_trainable_params:
@@ -318,7 +322,7 @@ def main():
             results = runner_classifier.run_val(val_examples, task_name=task.name, verbose=not args.not_verbose)
         else:
             results = runner.run_val(val_examples, task_name=task.name, verbose=not args.not_verbose)
-        
+
         df = pd.DataFrame(results["logits"])
         df.to_csv(os.path.join(args.output_dir, "val_preds.csv"), header=False, index=False)
         metrics_str = json.dumps({"loss": results["loss"], "metrics": results["metrics"]}, indent=2)
@@ -330,17 +334,18 @@ def main():
         if task.name == "mnli":
             mm_val_examples = MnliMismatchedProcessor().get_dev_examples(task.data_dir)
             if args.only_train_classifier:
-                mm_results = runner_classifier.run_val(mm_val_examples, task_name=task.name, verbose=not args.not_verbose)
+                mm_results = runner_classifier.run_val(mm_val_examples, task_name=task.name,
+                                                       verbose=not args.not_verbose)
             else:
                 mm_results = runner.run_val(mm_val_examples, task_name=task.name, verbose=not args.not_verbose)
-            
+
             df = pd.DataFrame(results["logits"])
             df.to_csv(os.path.join(args.output_dir, "mm_val_preds.csv"), header=False, index=False)
             combined_metrics = {}
             for k, v in results["metrics"].items():
                 combined_metrics[k] = v
             for k, v in mm_results["metrics"].items():
-                combined_metrics["mm-"+k] = v
+                combined_metrics["mm-" + k] = v
             combined_metrics_str = json.dumps({
                 "loss": results["loss"],
                 "metrics": combined_metrics,

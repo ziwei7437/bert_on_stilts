@@ -109,6 +109,41 @@ class InputFeatures(object):
         return self.__class__(**kwargs)
 
 
+class InputFeaturesSeparated(object):
+    """A single set of features of data, separated."""
+
+    def __init__(self, guid, input_ids_a, input_mask_a, segment_ids_a,
+                 input_ids_b, input_mask_b, segment_ids_b, label_id,
+                 tokens_a, tokens_b):
+        self.guid = guid
+        self.input_ids_a = input_ids_a
+        self.input_ids_b = input_ids_b
+        self.input_mask_a = input_mask_a
+        self.input_mask_b = input_mask_b
+        self.segment_ids_a = segment_ids_a
+        self.segment_ids_b = segment_ids_b
+        self.label_id = label_id
+        self.tokens_a = tokens_a
+        self.tokens_b = tokens_b
+
+    def new(self, **new_kwargs):
+        kwargs = {
+            "guid": self.guid,
+            "input_ids_a": self.input_ids_a,
+            "input_mask_a": self.input_mask_a,
+            "segment_ids_a": self.segment_ids_a,
+            "tokens_a": self.tokens_a,
+            "input_ids_b": self.input_ids_b,
+            "input_mask_b": self.input_mask_b,
+            "segment_ids_b": self.segment_ids_b,
+            "tokens_b": self.tokens_b,
+            "label_id": self.label_id,
+        }
+        for k, v in new_kwargs.items():
+            kwargs[k] = v
+        return self.__class__(**kwargs)
+
+
 class Batch:
     def __init__(self, input_ids, input_mask, segment_ids, label_ids, tokens):
         self.input_ids = input_ids
@@ -136,4 +171,48 @@ class Batch:
             segment_ids=self.segment_ids[key],
             label_ids=self.label_ids[key],
             tokens=self.tokens[key],
+        )
+
+
+class BatchSeparated:
+    def __init__(self, input_ids_a, input_mask_a, segment_ids_a,
+                 input_ids_b, input_mask_b, segment_ids_b, label_ids,
+                 tokens_a, tokens_b):
+        self.input_ids_a = input_ids_a
+        self.input_ids_b = input_ids_b
+        self.input_mask_a = input_mask_a
+        self.input_mask_b = input_mask_b
+        self.segment_ids_a = segment_ids_a
+        self.segment_ids_b = segment_ids_b
+        self.label_ids = label_ids
+        self.tokens_a = tokens_a
+        self.tokens_b = tokens_b
+
+    def to(self, device):
+        return BatchSeparated(
+            input_ids_a=self.input_ids_a.to(device),
+            input_mask_a=self.input_mask_a.to(device),
+            segment_ids_a=self.segment_ids_a.to(device),
+            input_ids_b=self.input_ids_b.to(device),
+            input_mask_b=self.input_mask_b.to(device),
+            segment_ids_b=self.segment_ids_b.to(device),
+            label_ids=self.label_ids.to(device),
+            tokens_a=self.tokens_a,
+            tokens_b=self.tokens_b,
+        )
+
+    def __len__(self):
+        return len(self.input_ids_a)
+
+    def __getitem__(self, key):
+        return BatchSeparated(
+            input_ids_a=self.input_ids_a[key],
+            input_mask_a=self.input_mask_a[key],
+            segment_ids_a=self.segment_ids_a[key],
+            input_ids_b=self.input_ids_b[key],
+            input_mask_b=self.input_mask_b[key],
+            segment_ids_b=self.segment_ids_b[key],
+            label_ids=self.label_ids[key],
+            tokens_a=self.tokens_a[key],
+            tokens_b=self.tokens_b[key],
         )
