@@ -231,8 +231,6 @@ def main():
             train_infer_classifier=args.only_train_infer_classifier,
         )
         runner_classifier.run_train_classifier(train_examples)
-        runner_classifier.training_state.draw_loss_curve()
-        runner_classifier.training_state.draw_val_history()
 
     if args.do_train and not args.only_train_classifier:
         if args.print_trainable_params:
@@ -322,6 +320,8 @@ def main():
         val_examples = task.get_dev_examples()
         if args.only_train_classifier:
             results = runner_classifier.run_val(val_examples, task_name=task.name, verbose=not args.not_verbose)
+            # save training states
+            torch.save(runner_classifier.training_state.tr_loss, os.path.join(args.output_dir, "minibatch_training_loss.list"))
         else:
             results = runner.run_val(val_examples, task_name=task.name, verbose=not args.not_verbose)
 
