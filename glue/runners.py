@@ -712,7 +712,7 @@ class GlueTaskClassifierRunner:
         return HybridLoader(train_dataloader, train_tokens)
 
     def get_train_dataloader_separated(self, train_examples, verbose=True):
-        train_features = convert_example_to_feature_separated(
+        train_features = convert_examples_to_features_separated(
             train_examples, self.label_map, self.rparams.max_seq_length, self.tokenizer,
             verbose=verbose
         )
