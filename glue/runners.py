@@ -629,7 +629,7 @@ class GlueTaskClassifierRunner:
             loss.backward()
 
         self.training_state.tr_loss.append(loss.item())
-        print("Mini-batch Loss: %f", self.training_state.tr_loss[-1])
+        print("Mini-batch Loss: {:.4f}".format(self.training_state.tr_loss[-1]))
 
         train_epoch_state.tr_loss += loss.item()
         train_epoch_state.nb_tr_examples += batch.input_ids.size(0) if not self.train_infer_classifier else batch.input_ids_a.size(0)
