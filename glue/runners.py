@@ -575,7 +575,7 @@ class GlueTaskClassifierRunner:
             logger.info("  Num steps = %d", self.rparams.t_total)
 
         if self.train_infer_classifier:
-            train_dataloader = self.get_eval_dataloader_separated(train_examples, verbose=verbose)
+            train_dataloader = self.get_train_dataloader_separated(train_examples, verbose=verbose)
         else:
             train_dataloader = self.get_train_dataloader(train_examples, verbose=verbose)
 
