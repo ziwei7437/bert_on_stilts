@@ -596,7 +596,6 @@ class GlueTaskClassifierRunner:
                 batch=batch,
                 train_epoch_state=train_epoch_state,
             )
-            logger.info("Mini-batch Loss: %f", self.training_state.tr_loss[-1])
             yield step, batch, train_epoch_state
 
     def run_train_step(self, step, batch, train_epoch_state):
@@ -628,6 +627,7 @@ class GlueTaskClassifierRunner:
             loss.backward()
 
         self.training_state.tr_loss.append(loss.item())
+        logger.info("Mini-batch Loss: %f", self.training_state.tr_loss[-1])
         train_epoch_state.tr_loss += loss.item()
         train_epoch_state.nb_tr_examples += batch.input_ids.size(0) if not self.train_infer_classifier else batch.input_ids_a.size(0)
         train_epoch_state.nb_tr_steps += 1
