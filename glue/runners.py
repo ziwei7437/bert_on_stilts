@@ -631,6 +631,9 @@ class GlueTaskClassifierRunner:
         train_epoch_state.tr_loss += loss.item()
         train_epoch_state.nb_tr_examples += batch.input_ids.size(0) if not self.train_infer_classifier else batch.input_ids_a.size(0)
         train_epoch_state.nb_tr_steps += 1
+
+        logger.info("nb_trained_examples: %d", train_epoch_state.nb_tr_examples)
+
         if (step + 1) % self.rparams.gradient_accumulation_steps == 0:
             # modify learning rate with special warm up BERT uses
             lr_this_step = self.rparams.learning_rate * warmup_linear(
